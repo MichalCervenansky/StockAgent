@@ -19,13 +19,24 @@ git clone https://github.com/Talen-520/StockAgent.git
 cd StockAgent
 ```
 
-### 2. Install Dependencies
+### 2. Create and Activate Virtual Environment
+```bash
+# Create a virtual environment
+python -m venv venv
 
+# Activate the virtual environment
+# On Windows
+venv\\Scripts\\activate
+# On macOS/Linux
+source venv/bin/activate
+```
+
+### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Install Ollama
+### 4. Install Ollama
 - Download and install  [Ollama](https://ollama.com/)
 - For best experience, I don't recommend any model under 7b
 - Pull open source model like qwen3 model, if you aren't using qwen3, change line 71 to correct model name under /agent.py 
@@ -35,6 +46,8 @@ ollama pull qwen3
 ```
 
 ## Run  
+Ensure your virtual environment is activated before running.
+
 In terminal
 ```bash
 python agent.py

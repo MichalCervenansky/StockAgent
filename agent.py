@@ -69,7 +69,7 @@ async def call_function(tool_call):
 
 async def main():
     client = ollama.AsyncClient()
-    model_name = 'qwen3:latest'
+    model_name = 'qwen3:1.7b'
     while True:
         user_input = input("You: ")
         if user_input.lower() in ['exit', 'quit']:
