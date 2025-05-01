@@ -1,11 +1,12 @@
 import requests
 from bs4 import BeautifulSoup
 import json
-from datetime import datetime
 import os
 import re
-from typing import List, Optional, Any
-from pydantic import BaseModel, HttpUrl, Field, field_validator, ConfigDict
+import datetime
+from typing import List, Optional
+from pydantic import BaseModel, Field, field_validator, ConfigDict
+from dateutil import parser
 
 
 class ArticleDetails(BaseModel):
@@ -29,7 +30,8 @@ class ArticleDetails(BaseModel):
 class ScraperConfig(BaseModel):
     """Configuration model for the scraper."""
     stock_symbol: str = Field(..., description="Stock symbol to scrape news for")
-    max_articles: int = Field(10, description="Maximum number of articles to scrape")
+    max_articles: int = Field(20, description="Maximum number of articles to scrape")
+    max_age: int = Field(3, description="Maximum age of articles in days")
     user_agent: str = Field(
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
         description="User agent string for HTTP requests"
@@ -93,6 +95,23 @@ class YahooFinanceScraper:
             print(f"Error extracting details from {url}: {e}")
             return None
 
+    def is_article_within_age_limit(self, timestamp: Optional[str]) -> bool:
+        """Check if article is within the configured max_age in days."""
+        if not timestamp:
+            # If we don't know the timestamp, we'll include it to be safe
+            return True
+            
+        try:
+            article_date = parser.parse(timestamp)
+            current_date = datetime.datetime.now(datetime.timezone.utc)
+            age_days = (current_date - article_date).days
+            
+            return age_days <= self.config.max_age
+        except Exception as e:
+            print(f"Error parsing article date: {e}")
+            # Include articles with unparseable dates to be safe
+            return True
+
     def scrape_news(self) -> List[ArticleDetails]:
         """Scrape news articles for the configured stock symbol."""
         print(f"Starting to scrape Yahoo Finance news for {self.config.stock_symbol}")
@@ -117,14 +136,25 @@ class YahooFinanceScraper:
                     unique_article_urls.append(url)
             
             articles = []
-            max_articles = min(self.config.max_articles, len(unique_article_urls))
-            print(f"Found {len(unique_article_urls)} unique articles, processing first {max_articles}")
+            processed_count = 0
+            max_urls_to_check = min(self.config.max_articles * 2, len(unique_article_urls))  # Process more to account for filtering
+            print(f"Found {len(unique_article_urls)} unique articles, checking up to {max_urls_to_check} for age filtering")
             
-            for article_url in unique_article_urls[:max_articles]:
+            for article_url in unique_article_urls[:max_urls_to_check]:
+                if len(articles) >= self.config.max_articles:
+                    break
+                    
                 article_details = self.extract_article_details(article_url)
+                processed_count += 1
+                
                 if article_details:
-                    articles.append(article_details)
+                    # Check if article is within age limit
+                    if self.is_article_within_age_limit(article_details.timestamp):
+                        articles.append(article_details)
+                    else:
+                        print(f"Skipping article older than {self.config.max_age} days: {article_details.title}")
             
+            print(f"Processed {processed_count} articles, found {len(articles)} within {self.config.max_age} day(s) age limit")
             return articles
             
         except Exception as e:
