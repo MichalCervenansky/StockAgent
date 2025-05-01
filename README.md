@@ -48,13 +48,9 @@ ollama pull qwen3
 ## Run  
 Ensure your virtual environment is activated before running.
 
-In terminal
-```bash
-python agent.py
-```
 Web UI
 ```bash
-streamlit run .\src\streamlit_local.py
+streamlit run streamlit/chat.py
 ```
 
 ## Example workflow
